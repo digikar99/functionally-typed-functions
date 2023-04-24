@@ -26,6 +26,9 @@ LAMBDA-LIST however, the TYPE-COMPUTING-FORM will be called with the types
 of the arguments at compile time or run time.
 
 BODY will be called with the arguments themselves."
+  (assert (null (intersection lambda-list lambda-list-keywords))
+          ()
+          "Currently DEPENDENTLY-TYPED-FUNCTION supports only required arguments")
   (multiple-value-bind (rem-forms decl doc-string)
       (parse-body body :documentation t)
     (with-gensyms (return-type return-value)

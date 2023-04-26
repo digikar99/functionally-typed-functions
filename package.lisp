@@ -6,4 +6,5 @@
   (:import-from :extensible-compound-types.impl
                 #:simplify-and-type)
   (:export #:def-dept-fun
-           #:dependently-typed-function))
+           #:dependently-typed-function
+           #:infer-return-type))

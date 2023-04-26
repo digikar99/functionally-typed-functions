@@ -62,3 +62,9 @@ BODY will be called with the arguments themselves."
                 ,return-value))))
          (setf (compiler-macro-function ',name) #'dept-fun-compiler-macro)
          ',name))))
+
+(defun infer-return-type (dept-fun-designator &rest argument-types)
+  (apply (dept-fun-type-lambda (etypecase dept-fun-designator
+                                 ((or list symbol) (fdefinition dept-fun-designator))
+                                 (dependently-typed-function dept-fun-designator)))
+         argument-types))

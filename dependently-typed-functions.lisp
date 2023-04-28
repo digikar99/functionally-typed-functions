@@ -73,3 +73,10 @@ BODY will be called with the arguments themselves."
                                  ((or list symbol) (fdefinition dept-fun-designator))
                                  (dependently-typed-function dept-fun-designator)))
          argument-types))
+
+(defun infer-return-type* (dept-fun-designator &rest arguments)
+  (apply (dept-fun-type-lambda (etypecase dept-fun-designator
+                                 ((or list symbol) (fdefinition dept-fun-designator))
+                                 (dependently-typed-function dept-fun-designator)))
+         (loop :for arg :in arguments
+               :collect `(eql ,arg))))

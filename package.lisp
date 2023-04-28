@@ -7,4 +7,5 @@
                 #:simplify-and-type)
   (:export #:def-dept-fun
            #:dependently-typed-function
-           #:infer-return-type))
+           #:infer-return-type
+           #:infer-return-type*))

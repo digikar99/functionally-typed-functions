@@ -1,5 +1,7 @@
 # dependently-typed-functions
 
+> WARNING: This is an experiment. Names may not match what you expect.
+
 Lisps are really free to compute at compile time, then why should dependently typed functions be an issue?
 
 Well, they are an issue for other reasons*. The current system provides a very primitive

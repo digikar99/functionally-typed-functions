@@ -1,9 +1,15 @@
 (in-package :dependently-typed-functions)
 
 (defun enhance-lambda-declarations (lambda-list arg-types)
-  (loop :for arg  :in lambda-list
-        :for type :in arg-types
-        :collect `(type ,type ,arg)))
+  (let* ((rest-position (position '&rest lambda-list))
+         (non-rest-parameters (remove-if (lambda (p)
+                                           (member p lambda-list-keywords))
+                                         (if rest-position
+                                             (subseq lambda-list 0 rest-position)
+                                             lambda-list))))
+    (loop :for arg  :in non-rest-parameters
+          :for type :in arg-types
+          :collect `(type ,type ,arg))))
 
 (defun dept-fun-compiler-macro-function (form &optional env)
 

@@ -26,9 +26,10 @@ LAMBDA-LIST however, the TYPE-COMPUTING-FORM will be called with the types
 of the arguments at compile time or run time.
 
 BODY will be called with the arguments themselves."
-  (assert (subsetp (intersection lambda-list lambda-list-keywords) '(&optional))
+  (assert (subsetp (intersection lambda-list lambda-list-keywords)
+                   '(&optional &rest))
           ()
-          "Currently DEPENDENTLY-TYPED-FUNCTION supports only required and optional arguments")
+          "Currently DEPENDENTLY-TYPED-FUNCTION supports only required, optional and rest arguments")
   (multiple-value-bind (rem-forms decl doc-string)
       (parse-body body :documentation t)
     (let ((type-lambda `(cl:lambda ,lambda-list

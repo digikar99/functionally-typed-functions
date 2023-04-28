@@ -44,13 +44,19 @@
                                (2 (list (first form)))
                                (3 (list (first form))))))))
 
+(declaim (inline wrap-in-eql/compile-time wrap-in-eql/run-time))
+(defun wrap-in-eql/compile-time (parameter) `(list 'eql ,parameter))
+(defun wrap-in-eql/run-time (parameter) `(eql ,parameter))
+
 (defun type-lambda-call-form (fun-sym lambda-list)
-  (flet ((wrap-in-eql (parameter)
-           `(list 'eql ,parameter)))
+  (let* ((rest-position  (position '&rest lambda-list))
+         (rest-parameter (when rest-position
+                           (nth (1+ rest-position) lambda-list))))
     (if (member '&optional lambda-list)
-        (let* ((optional-position (position '&optional lambda-list))
+        (let* ((optional-position   (position '&optional lambda-list))
                (required-parameters (subseq lambda-list 0 optional-position))
-               (optional-parameters (subseq lambda-list (1+ optional-position))))
+               (optional-parameters (subseq lambda-list (1+ optional-position)
+                                            (or rest-position (length lambda-list)))))
           `(cond ,@(loop :for (name default supplied-p) :in (reverse optional-parameters)
                          :for optional-idx :downfrom (length optional-parameters) :above 0
                          :for parameters := (append required-parameters
@@ -58,8 +64,15 @@
                                                             (subseq optional-parameters
                                                                     0 optional-idx)))
                          :collect `(,supplied-p
-                                    (funcall ,fun-sym
-                                             ,@(mapcar #'wrap-in-eql parameters))))
+                                    (apply ,fun-sym
+                                           ,@(mapcar #'wrap-in-eql/compile-time
+                                                     parameters)
+                                           ,rest-parameter)))
                  (t
-                  (funcall ,fun-sym ,@(mapcar #'wrap-in-eql required-parameters)))))
-        `(funcall ,fun-sym ,@(mapcar #'wrap-in-eql lambda-list)))))
+                  (apply ,fun-sym ,@(mapcar #'wrap-in-eql/compile-time
+                                            required-parameters)
+                         ,rest-parameter))))
+        `(apply ,fun-sym ,@(mapcar #'wrap-in-eql/compile-time
+                                   (subseq lambda-list 0
+                                           (or rest-position (length lambda-list))))
+                (mapcar #'wrap-in-eql/run-time ,rest-parameter)))))

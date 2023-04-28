@@ -18,7 +18,6 @@
 (defun parameters-from-lambda-list (lambda-list &optional collect-keywords)
   (loop :for state := 'required
         :for form :in lambda-list
-        ;; FIXME: This only handles required and optional arguments
         :nconcing (if (member form lambda-list-keywords)
                       (if collect-keywords
                           (list form)
@@ -44,14 +43,25 @@
                                (2 (list (first form)))
                                (3 (list (first form))))))))
 
-(declaim (inline wrap-in-eql/compile-time wrap-in-eql/run-time))
+(declaim (inline wrap-in-eql/compile-time
+                 wrap-in-eql/run-time/rest
+                 wrap-in-eql/run-time/key))
 (defun wrap-in-eql/compile-time (parameter) `(list 'eql ,parameter))
-(defun wrap-in-eql/run-time (parameter) `(eql ,parameter))
+(defun wrap-in-eql/run-time/rest (parameters)
+  (loop :for parameter :in parameters :collect `(eql ,parameter)))
+(defun wrap-in-eql/run-time/key (parameters)
+  (print
+   (loop :for parameter :in parameters
+         :for i :from 0
+         :collect (if (evenp i)
+                      parameter
+                      `(eql ,parameter)))))
 
 (defun type-lambda-call-form (fun-sym lambda-list)
   (let* ((rest-position  (position '&rest lambda-list))
          (rest-parameter (when rest-position
-                           (nth (1+ rest-position) lambda-list))))
+                           (nth (1+ rest-position) lambda-list)))
+         (key-position   (position '&key lambda-list)))
     (if (member '&optional lambda-list)
         (let* ((optional-position   (position '&optional lambda-list))
                (required-parameters (subseq lambda-list 0 optional-position))
@@ -75,4 +85,6 @@
         `(apply ,fun-sym ,@(mapcar #'wrap-in-eql/compile-time
                                    (subseq lambda-list 0
                                            (or rest-position (length lambda-list))))
-                (mapcar #'wrap-in-eql/run-time ,rest-parameter)))))
+                ,(if key-position
+                     `(wrap-in-eql/run-time/key  ,rest-parameter)
+                     `(wrap-in-eql/run-time/rest ,rest-parameter))))))

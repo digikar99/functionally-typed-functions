@@ -135,5 +135,4 @@ DEPENDENTLY-TYPED-FUNCTIONS> (cl-form-types:nth-form-type
 
 ### TODO
 
-- [ ] Handling lambda-lists other than required-args correctly.
 - [ ] Signal-ing compiler-macro-notes

@@ -27,9 +27,16 @@ of the arguments at compile time or run time.
 
 BODY will be called with the arguments themselves."
   (assert (subsetp (intersection lambda-list lambda-list-keywords)
-                   '(&optional &rest))
+                   '(&optional &key &rest))
           ()
-          "Currently DEPENDENTLY-TYPED-FUNCTION supports only required, optional and rest arguments")
+          "Currently DEPENDENTLY-TYPED-FUNCTION supports only required, optional,
+rest, and keyword arguments")
+  (when (and (member '&key lambda-list)
+             (not (member '&rest lambda-list)))
+    (let ((key-position (position '&key lambda-list)))
+      (setq lambda-list (append (subseq lambda-list 0 key-position)
+                                (list '&rest (gensym "ARGS"))
+                                (subseq lambda-list key-position)))))
   (multiple-value-bind (rem-forms decl doc-string)
       (parse-body body :documentation t)
     (let ((type-lambda `(cl:lambda ,lambda-list
@@ -75,9 +82,16 @@ BODY will be called with the arguments themselves."
                                  (dependently-typed-function dept-fun-designator)))
          argument-types))
 
-(defun infer-return-type* (dept-fun-designator &rest arguments)
+(defun infer-return-type* (dept-fun-designator
+                           positional-arguments
+                           &optional keyword-arguments)
   (apply (dept-fun-type-lambda (etypecase dept-fun-designator
                                  ((or list symbol) (fdefinition dept-fun-designator))
                                  (dependently-typed-function dept-fun-designator)))
-         (loop :for arg :in arguments
-               :collect `(eql ,arg))))
+         (nconc (loop :for arg :in positional-arguments
+                      :collect `(eql ,arg))
+                (loop :for arg :in keyword-arguments
+                      :for i :from 0
+                      :collect (if (evenp i)
+                                   arg
+                                   `(eql ,arg))))))

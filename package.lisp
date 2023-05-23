@@ -1,10 +1,14 @@
 (defpackage :dependently-typed-functions
-  (:use :cl :alexandria)
+  (:use :extensible-compound-types-cl)
+  (:import-from #:alexandria #:parse-body #:with-gensyms)
   (:import-from :extensible-compound-types
                 #:typexpand
-                #:specializing)
+                #:specializing
+                #:extype
+                #:upgraded-cl-type)
   (:import-from :extensible-compound-types.impl
-                #:simplify-and-type)
+                #:simplify-and-type
+                #:simplify-or-type)
   (:export #:def-dept-fun
            #:dependently-typed-function
            #:infer-return-type

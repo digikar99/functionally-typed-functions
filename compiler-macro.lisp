@@ -9,7 +9,8 @@
                                              lambda-list))))
     (loop :for arg  :in non-rest-parameters
           :for type :in arg-types
-          :collect `(type ,type ,arg))))
+          :nconc `((extype ,type ,arg)
+                   (cl:type ,(upgraded-cl-type type) ,arg)))))
 
 (defun dept-fun-compiler-macro-function (form &optional env)
 

@@ -6,7 +6,7 @@ Lisps are really free to compute at compile time, then why not use functions to 
 
 The current system provides functionally-typed-functions for Common Lisp through CLTL2 and CLOSER-MOP.
 
-*For instance, see the ugly mess that is `vector-type-element-type` and `vector-type-length` below.
+This does have issues since CL does not have principal types; types are too arbitrary. For instance, see the ugly mess that is `vector-type-element-type` and `vector-type-length` below.
 
 ### The Idea
 
@@ -171,3 +171,7 @@ FUNCTIONALLY-TYPED-FUNCTIONS> (cl-form-types:nth-form-type
 ### TODO
 
 - [ ] Signal-ing compiler-macro-notes
+
+### Dependencies
+
+![./ftf.png](./ftf.png)

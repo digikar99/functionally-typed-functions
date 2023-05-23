@@ -1,6 +1,6 @@
-(in-package :dependently-typed-functions)
+(in-package :functionally-typed-functions)
 
-(defun vector-type-element-type (vector-type &optional (simplify-and-type t))
+(defun vector-type-element-type (vector-type &optional (simplify-type t))
   (optima:ematch (typexpand vector-type)
     ((list* 'specializing 'array element-type _)
      element-type)
@@ -9,11 +9,15 @@
     ((list 'member vector)
      (array-element-type vector))
     ((list* 'and _)
-     (if simplify-and-type
+     (if simplify-type
          (vector-type-element-type (simplify-and-type vector-type) nil)
+         (error "Tried simplifying already")))
+    ((list* 'or _)
+     (if simplify-type
+         (vector-type-element-type (simplify-or-type vector-type) nil)
          (error "Tried simplifying already")))))
 
-(defun vector-type-length (vector-type &optional (simplify-and-type t))
+(defun vector-type-length (vector-type &optional (simplify-type t))
   (optima:ematch (typexpand vector-type)
     ((list* 'specializing 'array _ _ (list length) _)
      length)
@@ -22,23 +26,29 @@
     ((list 'member vector)
      (array-total-size vector))
     ((list* 'and _)
-     (if simplify-and-type
+     (if simplify-type
          (vector-type-length (simplify-and-type vector-type) nil)
+         (error "Tried simplifying already")))
+    ((list* 'or _)
+     (if simplify-type
+         (vector-type-element-type (simplify-or-type vector-type) nil)
          (error "Tried simplifying already")))))
 
-(def-dept-fun 1+vector (a)
+(def-typed-fun 1+vector (a)
     (if (subtypep a 'vector)
         (ignore-errors `(vector ,(vector-type-element-type a) ,(vector-type-length a)))
         nil)
   (let ((out (make-array (array-total-size a) :element-type (array-element-type a))))
     (loop :for i :below (array-total-size out)
-          :do (setf (row-major-aref out i) (row-major-aref a i)))
+          :do (setf (row-major-aref out i) (1+ (row-major-aref a i))))
     out))
 
-(def-dept-fun vector-copy (from to)
+(def-typed-fun vector-copy (from to)
     (if (and (subtypep from 'vector)
              (subtypep to 'vector))
-        (ignore-errors (if (and (type= (vector-type-element-type from)
+        (ignore-errors (print (list from to))
+
+                       (if (and (type= (vector-type-element-type from)
                                        (vector-type-element-type to))
                                 (eql (vector-type-length from)
                                      (vector-type-length to))

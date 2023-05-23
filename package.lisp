@@ -1,4 +1,4 @@
-(defpackage :dependently-typed-functions
+(defpackage :functionally-typed-functions
   (:use :extensible-compound-types-cl)
   (:import-from #:alexandria #:parse-body #:with-gensyms)
   (:import-from :extensible-compound-types
@@ -9,7 +9,7 @@
   (:import-from :extensible-compound-types.impl
                 #:simplify-and-type
                 #:simplify-or-type)
-  (:export #:def-dept-fun
-           #:dependently-typed-function
+  (:export #:def-typed-fun
+           #:functionally-typed-function
            #:infer-return-type
            #:infer-return-type*))

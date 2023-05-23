@@ -1,20 +1,46 @@
-# dependently-typed-functions
+# functionally-typed-functions
 
-> WARNING: This is an experiment. Names may not match what you expect.
+> WARNING: This is an experiment.
 
-Lisps are really free to compute at compile time, then why should dependently typed functions be an issue?
+Lisps are really free to compute at compile time, then why not use functions to compute the return (or argument) types themselves - both at run-time or compile-time?
 
-Well, they are an issue for other reasons*. The current system provides a very primitive
-proof-of-concept dependently-typed-functions for Common Lisp through CLTL2 and CLOSER-MOP.
+The current system provides functionally-typed-functions for Common Lisp through CLTL2 and CLOSER-MOP.
 
 *For instance, see the ugly mess that is `vector-type-element-type` and `vector-type-length` below.
+
+### The Idea
+
+A `functionally-typed-function` is defined using
+
+```lisp
+(def-typed-fun name lambda-list
+    type-computing-form
+  ...body...)
+```
+
+#### type-lambda
+
+With each `functionally-typed-function`, we associate a `type-lambda` that takes in the types of the arguments that the function was called or compiled with, and returns the intended return type. The intended return type can be `NIL` indicating that the function should never have been called with those arguments.
+
+At run time, the arguments to `type-lambda` are in the form of `` `(eql ,arg) ``, but at compile time, they can be any appropriate types.
+
+#### compiler-macro
+
+A `functionally-typed-function` is also associated with a compiler macro, which compiles to just the `body` if the `type-lambda` returns a non-`NIL` value at compile time. This may be avoided by declaring or declaiming the function to be `notinline`.
+
+#### type-declaration-propagation
+
+Using CLTL2, declarations are extracted from the environment at compile time, and these are further propagated inside the inlined-lambda. This requires that the parameters of a `functionally-typed-function` should be treated as constants, not doing so will result in undefined behavior.
+
+TODO: Add a simple but comprehensive example about this.
 
 ### Examples
 
 ```lisp
 
-(in-package :dependently-typed-functions)
+(in-package :functionally-typed-functions)
 
+;; These could be better, perhaps much better!
 (defun vector-type-element-type (vector-type &optional (simplify-and-type t))
   (optima:ematch (typexpand vector-type)
     ((list* 'specializing 'array element-type _)
@@ -26,7 +52,11 @@ proof-of-concept dependently-typed-functions for Common Lisp through CLTL2 and C
     ((list* 'and _)
      (if simplify-and-type
          (vector-type-element-type (simplify-and-type vector-type) nil)
-         (error "Tried simplifying already")))))
+         (error "Tried simplifying already"))))
+    ((list* 'or _)
+     (if simplify-type
+         (vector-type-element-type (simplify-or-type vector-type) nil)
+         (error "Tried simplifying already"))))
 
 (defun vector-type-length (vector-type &optional (simplify-and-type t))
   (optima:ematch (typexpand vector-type)
@@ -39,18 +69,22 @@ proof-of-concept dependently-typed-functions for Common Lisp through CLTL2 and C
     ((list* 'and _)
      (if simplify-and-type
          (vector-type-length (simplify-and-type vector-type) nil)
+         (error "Tried simplifying already")))
+    ((list* 'or _)
+     (if simplify-type
+         (vector-type-element-type (simplify-or-type vector-type) nil)
          (error "Tried simplifying already")))))
 
-(def-dept-fun 1+vector (a)
+(def-typed-fun 1+vector (a)
     (if (subtypep a 'vector)
         (ignore-errors `(vector ,(vector-type-element-type a) ,(vector-type-length a)))
         nil)
   (let ((out (make-array (array-total-size a) :element-type (array-element-type a))))
     (loop :for i :below (array-total-size out)
-          :do (setf (row-major-aref out i) (row-major-aref a i)))
+          :do (setf (row-major-aref out i) (1+ (row-major-aref a i))))
     out))
 
-(def-dept-fun vector-copy (from to)
+(def-typed-fun vector-copy (from to)
     (if (and (subtypep from 'vector)
              (subtypep to 'vector))
         (ignore-errors (if (and (type= (vector-type-element-type from)
@@ -70,24 +104,25 @@ proof-of-concept dependently-typed-functions for Common Lisp through CLTL2 and C
 #### In the REPL
 
 ```
-DEPENDENTLY-TYPED-FUNCTIONS> (1+vector '(1 2 3))
+FUNCTIONALLY-TYPED-FUNCTIONS> (1+vector '(1 2 3))
 ; Evaluation aborted on #<SIMPLE-TYPE-ERROR "Arguments~%  ~S~%do not satisfy type signature~%  ~S" {10099FF643}>.
 Arguments
   ((1 2 3))
 do not satisfy type signature
   (IF (SUBTYPEP A 'VECTOR)
-      (IGNORE-ERRORS `(VECTOR ,(VECTOR-TYPE-ELEMENT-TYPE A)))
+      (IGNORE-ERRORS
+       `(VECTOR ,(VECTOR-TYPE-ELEMENT-TYPE A)
+                ,(VECTOR-TYPE-LENGTH A)))
       NIL)
-   [Condition of type SIMPLE-TYPE-ERROR]
-DEPENDENTLY-TYPED-FUNCTIONS> (1+vector #(1 2 3))
+FUNCTIONALLY-TYPED-FUNCTIONS> (1+vector #(1 2 3))
 #(2 3 4)
-DEPENDENTLY-TYPED-FUNCTIONS> (cl-form-types:nth-form-type
-                              `(lambda (x)
-                                 (declare (type (vector single-float 10) x))
-                                 (1+vector x))
-                              nil 0 t t)
-(FUNCTION ((VECTOR SINGLE-FLOAT 10)) (AND (VECTOR SINGLE-FLOAT 10) T))
-DEPENDENTLY-TYPED-FUNCTIONS> (disassemble (lambda (x)
+FUNCTIONALLY-TYPED-FUNCTIONS> (cl-form-types:nth-form-type
+                               `(lambda (x)
+                                  (declare (type (vector single-float 10) x))
+                                  (1+vector x))
+                               nil 0 t t)
+(COMMON-LISP:FUNCTION ((VECTOR SINGLE-FLOAT 10)) (VECTOR SINGLE-FLOAT 10))
+FUNCTIONALLY-TYPED-FUNCTIONS> (disassemble (lambda (x)
                                             (declare (type (vector double-float 10) x)
                                                      (optimize speed))
                                             (vector-copy x x)))
@@ -124,13 +159,13 @@ DEPENDENTLY-TYPED-FUNCTIONS> (disassemble (lambda (x)
 ; 8B:       C3               RET
 ; 8C:       CC10             INT3 16                          ; Invalid argument count trap
 NIL
-DEPENDENTLY-TYPED-FUNCTIONS> (cl-form-types:nth-form-type
-                              `(lambda (x y)
-                                 (declare (type (vector single-float 10) x y))
-                                 (vector-add (1+vector x) y))
-                              nil 0 t t)
-(FUNCTION ((VECTOR SINGLE-FLOAT 10) (VECTOR SINGLE-FLOAT 10))
- (AND (VECTOR SINGLE-FLOAT) T))
+FUNCTIONALLY-TYPED-FUNCTIONS> (cl-form-types:nth-form-type
+                               `(lambda (x y)
+                                  (declare (type (vector single-float 10) x y))
+                                  (vector-copy (1+vector x) y))
+                               nil 0 t t)
+(COMMON-LISP:FUNCTION ((VECTOR SINGLE-FLOAT 10) (VECTOR SINGLE-FLOAT 10))
+ (VECTOR SINGLE-FLOAT 10))
 ```
 
 ### TODO

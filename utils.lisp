@@ -1,4 +1,4 @@
-(in-package #:dependently-typed-functions)
+(in-package #:functionally-typed-functions)
 
 (defun ignorable-form-from-lambda-list (lambda-list)
   (let ((vars (loop :for state := 'required

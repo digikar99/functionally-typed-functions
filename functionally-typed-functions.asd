@@ -1,4 +1,4 @@
-(defsystem "dependently-typed-functions"
+(defsystem "functionally-typed-functions"
   :depends-on ("alexandria"
                "closer-mop"
                "optima"
@@ -7,4 +7,4 @@
   :components ((:file "package")
                (:file "utils")
                (:file "compiler-macro")
-               (:file "dependently-typed-functions")))
+               (:file "functionally-typed-functions")))
